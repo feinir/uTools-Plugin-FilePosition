@@ -49,8 +49,14 @@ window.exports = {
                             if (err) {
                                 addRoot(callbackSetList);
                             } else {
-                                if (stat.isDirectory() || stat.isFile()) {
+                                if (stat.isFile()) {
                                     window.utools.setSubInputValue(findWord);
+                                }else if(stat.isDirectory()){
+                                    if(findWord.charAt(findWord.length-1) == "/" || findWord.charAt(findWord.length-1) == "\\"){
+                                        window.utools.setSubInputValue(findWord);
+                                    }else{
+                                        window.utools.setSubInputValue(findWord+"\\");
+                                    }
                                 } else {
                                     addRoot(callbackSetList);
                                 }
@@ -120,7 +126,7 @@ window.exports = {
                             }
                         });
                         var StartTime = new Date().getTime();
-                        while ((new Date().getTime() < StartTime + 1000) && (itemes.length <= 2));
+                        while ((new Date().getTime() < StartTime + 100) && (itemes.length < 2));
                         fs.readdir(findWord, function (err, files) {
                             if (!err) {
                                 files.forEach(function (filename) {
@@ -207,7 +213,7 @@ window.exports = {
                                             });
                                         }
                                     });
-                                    while ((new Date().getTime() < StartTime + 1000) && (itemes.length <= 2));
+                                    while ((new Date().getTime() < StartTime + 100) && (itemes.length < 2));
                                     fs.readdir(parentPath, function (err, files) {
                                         if (!err) {
                                             files.forEach(function (filename) {
