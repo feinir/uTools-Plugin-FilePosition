@@ -261,7 +261,7 @@ window.exports = {
                 } else if (itemData.isParent) {
                     window.utools.hideMainWindow();
                     const url = itemData.url;
-                    window.utools.shellShowItemInFolder(url);
+                    window.utools.shellOpenItem(url);
                     window.utools.outPlugin();
                 } else {
                     window.utools.setSubInputValue(itemData.url + "\\");
