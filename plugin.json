@@ -4,13 +4,21 @@
 	"preload": "preload.js",
 	"version": "0.0.1",
 	"logo": "logo.png",
-	"author": "author",
+	"author": "feinir",
 	"homepage": "https://u.tools",
 	"features": [
 		{
 		  "code": "go",
 		  "explain": "快速定位文件文件夹",
-			"cmds":["go", "wjdw", "wj", "文件定位", "文件夹定位"]
+			"cmds":["go", "wjdw", "wj", "文件定位", "文件夹定位",
+				{
+					"type": "regex",
+					"label": "前往文件夹",
+					"match": "/^\"?[C-Zc-z]:(?:\\\\|\\/\\/?)[^:*?\"<>|\\f\\n\\r\\t\\v]*\"?$/",
+					"minLength": 2,
+					"maxLength": 1024
+				}
+			]
 		}
 	]
 }

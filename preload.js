@@ -2,40 +2,64 @@ var fs = require("fs");
 var path = require('path');
 var exec = require('child_process').exec;
 
+function addRoot(callbackSetList) {
+    itemes = [];
+    exec('wmic logicaldisk get caption', function (err, stdout, stderr) {
+        if (!(err || stderr)) {
+            stdoutStr = stdout;
+            console.log(stdoutStr);
+            var outStrArray = stdoutStr.split("\n");
+            console.log(outStrArray[0] + " : " + outStrArray.length);
+            for (i = 1; i < outStrArray.length; i++) {
+                if (outStrArray[i].trim().length > 1) {
+                    itemes.push({
+                        title: outStrArray[i].trim(),
+                        description: '在此分区内查找',
+                        icon: 'logo.png', // 图标(可选)
+                        url: outStrArray[i].trim(),
+                        isParent: false,
+                        isDir: true
+                    });
+                    console.log("add:" + outStrArray[i]);
+                    callbackSetList(itemes);
+                }
+            }
+        }
+    });
+}
+
 window.exports = {
     "go": { // 注意：键对应的是 plugin.json 中的 features.code
         mode: "list",  // 列表模式
         args: {
             // 进入插件时调用（可选）
             enter: (action, callbackSetList) => {
-                // 如果进入插件就要显示列表数据
-                itemes = [];
-
-                exec('wmic logicaldisk get caption', function (err, stdout, stderr) {
-                    if (!(err || stderr)) {
-                        stdoutStr = stdout;
-                        console.log(stdoutStr);
-                        var outStrArray = stdoutStr.split("\n");
-                        console.log(outStrArray[0] + " : " + outStrArray.length);
-                        for (i = 1; i < outStrArray.length; i++) {
-                            if (outStrArray[i].trim().length > 1) {
-                                itemes.push({
-                                    title: outStrArray[i].trim(),
-                                    description: '在此分区内查找',
-                                    icon: 'logo.png', // 图标(可选)
-                                    url: outStrArray[i].trim(),
-                                    isParent: false,
-                                    isDir: true
-                                });
-                                console.log("add:" + outStrArray[i]);
-                                callbackSetList(itemes);
-                            }
+                if (action.type == "regex") {
+                    console.log(action.type + " : " + action.payload);
+                    var findWord = action.payload;
+                    var pett = /^"?[C-Zc-z]:[^:*?"<>|\f\n\r\t\v]*"?$/;
+                    if (!pett.test(findWord)) {
+                        addRoot(callbackSetList);
+                    } else {
+                        if ((findWord.charAt(0) == "\"") || (findWord.charAt(0) == "\'")) {
+                            findWord = findWord.replace(/\"/g, "");
+                            findWord = findWord.replace(/\'/g, "");
                         }
+                        fs.stat(findWord, function (err, stat) {
+                            if (err) {
+                                addRoot(callbackSetList);
+                            } else {
+                                if (stat.isDirectory() || stat.isFile()) {
+                                    window.utools.setSubInputValue(findWord);
+                                } else {
+                                    addRoot(callbackSetList);
+                                }
+                            }
+                        });
                     }
-                });
-
-                console.log("itemes len:" + itemes.length);
-
+                } else {
+                    addRoot(callbackSetList);
+                }
             },
             // 子输入框内容变化时被调用 可选 (未设置则无搜索)
             search: (action, searchWord, callbackSetList) => {
@@ -43,43 +67,18 @@ window.exports = {
                 // 执行 callbackSetList 显示出来
                 var pett = /^"?[C-Zc-z]:[^:*?"<>|\f\n\r\t\v]*"?$/;
                 if (!pett.test(searchWord)) {
-                    itemes = [];
-                    exec('wmic logicaldisk get caption', function (err, stdout, stderr) {
-                        if (!(err || stderr)) {
-                            stdoutStr = stdout;
-                            console.log(stdoutStr);
-                            var outStrArray = stdoutStr.split("\n");
-                            console.log(outStrArray[0] + " : " + outStrArray.length);
-                            for (i = 1; i < outStrArray.length; i++) {
-                                if (outStrArray[i].trim().length > 1) {
-                                    itemes.push({
-                                        title: outStrArray[i].trim(),
-                                        description: '在此分区内查找',
-                                        icon: 'logo.png', // 图标(可选)
-                                        url: outStrArray[i].trim(),
-                                        isParent: false,
-                                        isDir: true
-                                    });
-                                    console.log("add:" + outStrArray[i]);
-                                    callbackSetList(itemes);
-                                }
-                            }
-                        }
-                    });
+                    addRoot(callbackSetList);
                     return;
                 }
                 var pett2 = /^"?[C-Zc-z]:$/;
                 var findWord = searchWord;
                 if (pett2.test(findWord)) {
                     findWord = findWord + "\\";
-                } else {
-
                 }
                 fs.stat(findWord, function (err, stat) {
                     if (stat && stat.isDirectory()) {
                         console.log('文件夹存在');
                         var itemes = [];
-
                         //先把文件夹本身放到第一条
                         var f = {
                             title: findWord,
