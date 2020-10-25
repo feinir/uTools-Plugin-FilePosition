@@ -1,0 +1,16 @@
+{
+	"pluginName": "文件、文件夹定位",
+	"description": "快速定位文件文件夹",
+	"preload": "preload.js",
+	"version": "0.0.1",
+	"logo": "logo.png",
+	"author": "author",
+	"homepage": "https://u.tools",
+	"features": [
+		{
+		  "code": "go",
+		  "explain": "快速定位文件文件夹",
+			"cmds":["go", "wjdw", "wj", "文件定位", "文件夹定位"]
+		}
+	]
+}
