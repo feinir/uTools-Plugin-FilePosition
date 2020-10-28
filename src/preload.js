@@ -28,6 +28,86 @@ function addRoot(callbackSetList) {
     });
 }
 
+function existDir(dirPathName) {
+    try {
+        var stat = fs.statSync(dirPathName);
+        if (stat.isDirectory()) {
+            return true;
+        } else {
+            return false;
+        }
+    } catch (error) {
+        return false;
+    }
+}
+
+function existFile(dirPathName) {
+    try {
+        var stat = fs.statSync(dirPathName);
+        if (stat.isFile()) {
+            return true;
+        } else {
+            return false;
+        }
+    } catch (error) {
+        return false;
+    }
+}
+
+function existFileOrDir(dirPathName) {
+    try {
+        var stat = fs.statSync(dirPathName);
+        if (stat.isFile()) {
+            return true;
+        } else if (stat.isDirectory()) {
+            return true;
+        } else {
+            return false;
+        }
+    } catch (error) {
+        return false;
+    }
+}
+
+function getStat(dirPathName) {
+    try {
+        var stat = fs.statSync(dirPathName);
+        if (stat) {
+            return stat;
+        } else {
+            return null;
+        }
+    } catch (error) {
+        return null;
+    }
+}
+
+function getExistPath(dirPathName) {
+    if (!dirPathName) {
+        return "";
+    }
+    if (dirPathName.length < 2) {
+        return "";
+    } else {
+        if (existFileOrDir(dirPathName)) {
+            return dirPathName;
+        } else {
+            var tempStr = dirPathName;
+            if (tempStr.charAt(tempStr.length - 1) == "/" || tempStr.charAt(tempStr.length - 1) == "\\") {
+                tempStr = tempStr.substring(0, tempStr.length - 1);
+            }
+            var lastIndex = tempStr.lastIndexOf("\\");
+            if (lastIndex >= 1) {
+                tempStr = tempStr.substring(0, lastIndex);
+                return getExistPath(tempStr);
+            } else {
+                return "";
+            }
+        }
+    }
+    return "";
+}
+
 window.exports = {
     "go": { // 注意：键对应的是 plugin.json 中的 features.code
         mode: "list",  // 列表模式
@@ -38,32 +118,44 @@ window.exports = {
                     console.log(action.type + " : " + action.payload);
                     var findWord = action.payload;
                     var pett = /^"?[C-Zc-z]:[^:*?"<>|\f\n\r\t\v]*"?$/;
-                    if (!pett.test(findWord)) {
-                        addRoot(callbackSetList);
-                    } else {
+                    if (pett.test(findWord)) {
                         if ((findWord.charAt(0) == "\"") || (findWord.charAt(0) == "\'")) {
                             findWord = findWord.replace(/\"/g, "");
                             findWord = findWord.replace(/\'/g, "");
                         }
-                        fs.stat(findWord, function (err, stat) {
-                            if (err) {
-                                addRoot(callbackSetList);
-                            } else {
-                                if (stat.isFile()) {
-                                    window.utools.setSubInputValue(findWord);
-                                }else if(stat.isDirectory()){
-                                    if(findWord.charAt(findWord.length-1) == "/" || findWord.charAt(findWord.length-1) == "\\"){
-                                        window.utools.setSubInputValue(findWord);
-                                    }else{
-                                        window.utools.setSubInputValue(findWord+"\\");
-                                    }
-                                } else {
+                        var existPath = getExistPath(findWord);
+                        console.log("Exist Path:" + existPath);
+                        if (existPath.length > 0) {
+                            fs.stat(existPath, function (err, stat) {
+                                if(err){
                                     addRoot(callbackSetList);
+                                }else{
+                                    if (stat.isFile()) {
+                                        console.log("File: " + existPath);
+                                        window.utools.setSubInputValue(existPath);
+                                    } else if (stat.isDirectory()) {
+                                        console.log("Dir: " + existPath);
+                                        if (existPath.charAt(existPath.length - 1) == "/" || existPath.charAt(existPath.length - 1) == "\\") {
+                                            window.utools.setSubInputValue(existPath);
+                                        } else {
+                                            window.utools.setSubInputValue(existPath + "\\");
+                                        }
+                                    } else {
+                                        console.log("No File or No Dir");
+                                        addRoot(callbackSetList);
+                                    }
                                 }
-                            }
-                        });
+                            });
+                        } else {
+                            console.log("Not Find");
+                            addRoot(callbackSetList);
+                        }
+                    } else {
+                        console.log("正则不匹配");
+                        addRoot(callbackSetList);
                     }
                 } else {
+                    // no regex
                     addRoot(callbackSetList);
                 }
             },

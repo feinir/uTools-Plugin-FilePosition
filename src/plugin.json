@@ -2,10 +2,11 @@
 	"pluginName": "文件、文件夹定位",
 	"description": "快速定位文件文件夹",
 	"preload": "preload.js",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"logo": "logo.png",
 	"author": "feinir",
 	"homepage": "https://u.tools",
+	"platform": ["win32"],
 	"features": [
 		{
 		  "code": "go",
