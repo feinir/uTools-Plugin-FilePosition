@@ -2,11 +2,11 @@
 	"pluginName": "文件、文件夹定位",
 	"description": "快速定位文件文件夹",
 	"preload": "preload.js",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"logo": "logo.png",
 	"author": "feinir",
 	"homepage": "https://u.tools",
-	"platform": ["win32"],
+	"platform": ["win32","darwin","linux"],
 	"features": [
 		{
 		  "code": "go",
@@ -17,6 +17,13 @@
 					"label": "前往文件夹",
 					"match": "/^\"?[C-Zc-z]:[^:*?\"<>|\\f\\n\\r\\t\\v]*\"?$/",
 					"minLength": 2,
+					"maxLength": 1024
+				},
+				{
+					"type": "regex",
+					"label": "前往文件夹",
+					"match": "/^\"?'?\/(.+\/?)+'?\"?$/",
+					"minLength": 1,
 					"maxLength": 1024
 				}
 			]

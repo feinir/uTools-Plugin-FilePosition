@@ -4,28 +4,91 @@ var exec = require('child_process').exec;
 
 function addRoot(callbackSetList) {
     itemes = [];
-    exec('wmic logicaldisk get caption', function (err, stdout, stderr) {
-        if (!(err || stderr)) {
-            stdoutStr = stdout;
-            console.log(stdoutStr);
-            var outStrArray = stdoutStr.split("\n");
-            console.log(outStrArray[0] + " : " + outStrArray.length);
-            for (i = 1; i < outStrArray.length; i++) {
-                if (outStrArray[i].trim().length > 1) {
-                    itemes.push({
-                        title: outStrArray[i].trim(),
-                        description: '在此分区内查找',
-                        icon: 'logo.png', // 图标(可选)
-                        url: outStrArray[i].trim(),
-                        isParent: false,
-                        isDir: true
-                    });
-                    console.log("add:" + outStrArray[i]);
-                    callbackSetList(itemes);
+    if (utools.isWindows()) {
+        exec('wmic logicaldisk get caption', function (err, stdout, stderr) {
+            if (!(err || stderr)) {
+                stdoutStr = stdout;
+                console.log(stdoutStr);
+                var outStrArray = stdoutStr.split("\n");
+                console.log(outStrArray[0] + " : " + outStrArray.length);
+                for (i = 1; i < outStrArray.length; i++) {
+                    if (outStrArray[i].trim().length > 1) {
+                        itemes.push({
+                            title: outStrArray[i].trim(),
+                            description: '在此分区内查找',
+                            icon: 'logo.png', // 图标(可选)
+                            url: outStrArray[i].trim(),
+                            isParent: false,
+                            isDir: true
+                        });
+                        console.log("add:" + outStrArray[i]);
+                        callbackSetList(itemes);
+                    }
                 }
             }
-        }
-    });
+        });
+    } else {
+        var StartTime = new Date().getTime();
+        fs.readdir("/", function (err, files) {
+            if (!err) {
+                files.forEach(function (filename) {
+                    var filedir = path.join("/", filename);
+                    fs.stat(filedir, function (eror, stats) {
+                        if (!eror) {
+                            var isDir = stats.isDirectory();//是文件夹
+                            if (isDir) {
+                                console.log(filedir);
+                                var f = {
+                                    title: filename,
+                                    description: filedir,
+                                    icon: 'logo.png',
+                                    url: filedir,
+                                    isParent: false,
+                                    isDir: true
+                                };
+                                itemes.push(f);
+                                callbackSetList(itemes);
+                                if (itemes.length >= 10) {
+                                    return;
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+        });
+        while ((new Date().getTime() < StartTime + 100) && (itemes.length < 2));
+        fs.readdir("/", function (err, files) {
+            if (!err) {
+                files.forEach(function (filename) {
+                    var filedir = path.join("/", filename);
+                    fs.stat(filedir, function (eror, stats) {
+                        if (!eror) {
+                            var isFile = stats.isFile();//是文件
+                            if (isFile) {
+                                console.log(filedir);
+                                var f = {
+                                    title: filename,
+                                    description: filedir,
+                                    icon: 'file.png',
+                                    url: filedir,
+                                    isParent: false,
+                                    isDir: false
+                                };
+                                itemes.push(f);
+                                callbackSetList(itemes);
+                                if (itemes.length >= 10) {
+                                    return;
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+        });
+    }
+    console.log("add: /");
+    callbackSetList(itemes);
 }
 
 function existDir(dirPathName) {
@@ -86,17 +149,41 @@ function getExistPath(dirPathName) {
     if (!dirPathName) {
         return "";
     }
-    if (dirPathName.length < 2) {
-        return "";
+    if (utools.isWindows()) {
+        if (dirPathName.length < 2) {
+            return "";
+        } else {
+            if (existFileOrDir(dirPathName)) {
+                return dirPathName;
+            } else {
+                var tempStr = dirPathName;
+                if (tempStr.charAt(tempStr.length - 1) == "/" || tempStr.charAt(tempStr.length - 1) == "\\") {
+                    tempStr = tempStr.substring(0, tempStr.length - 1);
+                }
+                var lastIndex = tempStr.lastIndexOf("\\");
+                if (lastIndex >= 1) {
+                    tempStr = tempStr.substring(0, lastIndex);
+                    return getExistPath(tempStr);
+                } else {
+                    return "";
+                }
+            }
+        }
     } else {
         if (existFileOrDir(dirPathName)) {
             return dirPathName;
         } else {
             var tempStr = dirPathName;
-            if (tempStr.charAt(tempStr.length - 1) == "/" || tempStr.charAt(tempStr.length - 1) == "\\") {
+            if (tempStr == "/") {
+                return tempStr;
+            }
+            if (tempStr == "\\") {
+                return "/";
+            }
+            if ((tempStr.charAt(tempStr.length - 1) == "/" || tempStr.charAt(tempStr.length - 1) == "\\") && (tempStr.length > 1)) {
                 tempStr = tempStr.substring(0, tempStr.length - 1);
             }
-            var lastIndex = tempStr.lastIndexOf("\\");
+            var lastIndex = tempStr.lastIndexOf("/");
             if (lastIndex >= 1) {
                 tempStr = tempStr.substring(0, lastIndex);
                 return getExistPath(tempStr);
@@ -117,7 +204,11 @@ window.exports = {
                 if (action.type == "regex") {
                     console.log(action.type + " : " + action.payload);
                     var findWord = action.payload;
-                    var pett = /^"?[C-Zc-z]:[^:*?"<>|\f\n\r\t\v]*"?$/;
+
+                    var pett = /^"?'?\/(.+\/?)+'?"?$/;
+                    if (utools.isWindows()) {
+                        pett = /^"?[C-Zc-z]:[^:*?"<>|\f\n\r\t\v]*"?$/;
+                    }
                     if (pett.test(findWord)) {
                         if ((findWord.charAt(0) == "\"") || (findWord.charAt(0) == "\'")) {
                             findWord = findWord.replace(/\"/g, "");
@@ -127,9 +218,9 @@ window.exports = {
                         console.log("Exist Path:" + existPath);
                         if (existPath.length > 0) {
                             fs.stat(existPath, function (err, stat) {
-                                if(err){
+                                if (err) {
                                     addRoot(callbackSetList);
-                                }else{
+                                } else {
                                     if (stat.isFile()) {
                                         console.log("File: " + existPath);
                                         window.utools.setSubInputValue(existPath);
@@ -138,7 +229,11 @@ window.exports = {
                                         if (existPath.charAt(existPath.length - 1) == "/" || existPath.charAt(existPath.length - 1) == "\\") {
                                             window.utools.setSubInputValue(existPath);
                                         } else {
-                                            window.utools.setSubInputValue(existPath + "\\");
+                                            if (utools.isWindows()) {
+                                                window.utools.setSubInputValue(existPath + "\\");
+                                            } else {
+                                                window.utools.setSubInputValue(existPath + "/");
+                                            }
                                         }
                                     } else {
                                         console.log("No File or No Dir");
@@ -163,24 +258,45 @@ window.exports = {
             search: (action, searchWord, callbackSetList) => {
                 // 获取一些数据
                 // 执行 callbackSetList 显示出来
-                var pett = /^"?[C-Zc-z]:[^:*?"<>|\f\n\r\t\v]*"?$/;
+                var pett = /^"?'?\/(.+\/?)+'?"?$/;
+                if (utools.isWindows()) {
+                    pett = /^"?[C-Zc-z]:[^:*?"<>|\f\n\r\t\v]*"?$/;
+                }
                 if (!pett.test(searchWord)) {
                     addRoot(callbackSetList);
                     return;
                 }
-                var pett2 = /^"?[C-Zc-z]:$/;
+
                 var findWord = searchWord;
-                if (pett2.test(findWord)) {
-                    findWord = findWord + "\\";
+                if (utools.isWindows()) {
+                    var pett2 = /^"?[C-Zc-z]:$/;
+                    if (pett2.test(findWord)) {
+                        findWord = findWord + "\\";
+                    }
+                } else {
+                    if (findWord.length == 0) {
+                        findWord = "/";
+                    }
+                    if (findWord == "\\") {
+                        findWord = "/";
+                    }
                 }
                 fs.stat(findWord, function (err, stat) {
                     if (stat && stat.isDirectory()) {
                         console.log('文件夹存在');
                         var itemes = [];
                         //先把文件夹本身放到第一条
+                        var des = "";
+                        if (utools.isWindows()) {
+                            des = "在资源管理器中打开";
+                        } else if (utools.isMacOs()) {
+                            des = "在Finder中打开";
+                        } else {
+                            des = "在文件管理器中打开";
+                        }
                         var f = {
                             title: findWord,
-                            description: "在资源管理器中打开",
+                            description: des,
                             icon: 'logo.png',
                             url: findWord,
                             isParent: true,
@@ -252,9 +368,17 @@ window.exports = {
                         //文件
                         console.log('文件存在');
                         var itemes = [];
+                        var des = "";
+                        if (utools.isWindows()) {
+                            des = "在资源管理器中定位此文件";
+                        } else if (utools.isMacOs()) {
+                            des = "在Finder中定位此文件";
+                        } else {
+                            des = "在文件管理器中定位此文件";
+                        }
                         var f = {
                             title: findWord,
-                            description: "在资源管理器中定位此文件",
+                            description: des,
                             icon: 'logo.png',
                             url: findWord,
                             isParent: true,
@@ -265,12 +389,33 @@ window.exports = {
                     } else {
                         //非文件
                         console.log('输入的路径不是现存的文件！');
-                        index = findWord.lastIndexOf("\\");
-                        if ((index <= 0) || (index >= findWord.length - 1)) return;
-                        var parentPath = findWord.substring(0, index + 1);
-                        var keyWord = findWord.substring(index + 1, findWord.length);
-                        if (keyWord.length <= 0) return;
+                        var parentPath;
+                        var keyWord;
+                        if (utools.isWindows()) {
+                            index = findWord.lastIndexOf("\\");
+                            if ((index <= 0) || (index >= findWord.length - 1)) return;
+                            parentPath = findWord.substring(0, index + 1);
+                            keyWord = findWord.substring(index + 1, findWord.length);
+                            if (keyWord.length <= 0) return;
+                            var pett2 = /^"?[C-Zc-z]:$/;
+                            if (pett2.test(parentPath)) {
+                                parentPath = parentPath + "\\";
+                            }
+                        } else {
+                            index = findWord.lastIndexOf("/");
+                            if (index < 0) return;
+                            parentPath = findWord.substring(0, index + 1);
+                            keyWord = findWord.substring(index + 1, findWord.length);
+                            if (parentPath.length == 0) {
+                                parentPath = "/";
+                            }
+                            if (parentPath == "\\") {
+                                parentPath = "/";
+                            }
+                        }
+
                         var itemes = [];
+
                         fs.stat(parentPath, function (eror, stats) {
                             if (!eror) {
                                 if (stats.isDirectory()) {
@@ -356,7 +501,11 @@ window.exports = {
                     window.utools.shellOpenItem(url);
                     window.utools.outPlugin();
                 } else {
-                    window.utools.setSubInputValue(itemData.url + "\\");
+                    if (utools.isWindows()) {
+                        window.utools.setSubInputValue(itemData.url + "\\");
+                    } else {
+                        window.utools.setSubInputValue(itemData.url + "/");
+                    }
                 }
             },
             // 子输入框为空时的占位符，默认为字符串"搜索"
